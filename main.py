@@ -8,12 +8,8 @@ from datetime import datetime
 with open("creds.json", "r") as file:
     creds = json.load(file)
     
-creds['api_sheets']['private_key'] = creds['api_sheets']['private_key'].replace('\\n', '\n')
+gc = gspread.service_account_from_dict(creds['api_sheets'])
 # =================================================================
-
-scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-creds_sheets = Credentials.from_service_account_info(creds['api_sheets'], scopes=scopes )
-gc = gspread.authorize(creds_sheets)
 
 #Atribuindo as informações do JSON a variáveis
 bot = telebot.TeleBot(creds['telegram']['bot_token'])
