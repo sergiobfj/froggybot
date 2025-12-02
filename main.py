@@ -6,21 +6,19 @@ from datetime import datetime
 
 # --- INÍCIO DA SEÇÃO DE CONFIGURAÇÃO ---
 
-# Constrói o dicionário de credenciais do Google a partir de variáveis de ambiente individuais.
-# Isso evita qualquer problema de formatação de JSON.
+# Constrói o dicionário de credenciais do Google a partir das suas variáveis de ambiente.
 try:
     creds_dict = {
-        "type": os.environ['TYPE'],
-        "project_id": os.environ['PROJECT_ID'],
-        "private_key_id": os.environ['PRIVATE_KEY_ID'],
-        # A linha abaixo é a correção crucial: garante que as quebras de linha da chave privada sejam interpretadas corretamente.
-        "private_key": os.environ['PRIVATE_KEY'].replace('\\n', '\n'),
-        "client_email": os.environ['CLIENT_EMAIL'],
-        "client_id": os.environ['CLIENT_ID'],
-        "auth_uri": os.environ['AUTH_URI'],
-        "token_uri": os.environ['TOKEN_URI'],
-        "auth_provider_x509_cert_url": os.environ['AUTH_PROVIDER_X509_CERT_URL'],
-        "client_x509_cert_url": os.environ['CLIENT_X509_CERT_URL']
+        "type": os.environ['GS_TYPE'],
+        "project_id": os.environ['GS_PROJECT_ID'],
+        "private_key_id": os.environ['GS_PRIVATE_KEY_ID'],
+        "private_key": os.environ['GS_PRIVATE_KEY'].replace('\\n', '\n'),
+        "client_email": os.environ['GS_CLIENT_EMAIL'],
+        "client_id": os.environ['GS_CLIENT_ID'],
+        "auth_uri": os.environ['GS_AUTH_URI'],
+        "token_uri": os.environ['GS_TOKEN_URI'],
+        "auth_provider_x509_cert_url": os.environ['GS_AUTH_PROVIDER_CERT_URL'],
+        "client_x509_cert_url": os.environ['GS_CLIENT_CERT_URL']
     }
 except KeyError as e:
     print(f"[FROGGY-LOG] ERRO CRÍTICO: A variável de ambiente {e} não foi encontrada!")
@@ -28,9 +26,9 @@ except KeyError as e:
 
 # Carrega as outras configurações do ambiente
 bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
-chat_id = os.environ.get('TELEGRAM_CHAT_ID')
-sheet_url = os.environ.get('SHEET_URL')
-shortner_url = os.environ.get('SHORTNER_URL')
+chat_id = os.environ.get('TELEGRAM_CHAT_ID_PROD') # Usando a variável de produção
+sheet_url = os.environ.get('PLANILHA_URL')
+shortner_url = os.environ.get('ENCURTADOR_URL')
 
 if not all([bot_token, chat_id, sheet_url, shortner_url]):
     raise ValueError("ERRO: Uma ou mais variáveis (TELEGRAM_BOT_TOKEN, CHAT_ID, etc.) não foram definidas!")
