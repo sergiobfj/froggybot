@@ -9,9 +9,7 @@ with open("creds.json", "r") as file:
     creds = json.load(file)
 
 scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-
 creds_sheets = Credentials.from_service_account_info(creds, scopes=scopes)
-
 gc = gspread.authorize(creds_sheets)
 
 #Atribuindo as informações do JSON a variáveis
