@@ -5,25 +5,27 @@ from time import sleep
 from datetime import datetime
 
 #Carregando o JSON com algumas informações 
+# Abrindo o JSON
 with open("creds.json", "r") as file:
     creds = json.load(file)
-    
-creds['api_sheets']['private_key'] = creds['api_sheets']['private_key'].replace('\\n', '\n')
 
-# Usando o método nativo do gspread para autorização a partir do dicionário.
+# Corrigindo a chave privada para garantir que os \n são interpretados corretamente
+private_key = creds['api_sheets']['private_key']
+private_key = private_key.replace("\\n", "\n")  # caso venha do JSON com \n
+creds['api_sheets']['private_key'] = private_key
+
+# Autorizando o gspread com o dicionário
 gc = gspread.service_account_from_dict(creds['api_sheets'])
 # =================================================================
-#
-#Atribuindo as informações do JSON a variáveis
+# Configurando bot e planilha
 bot = telebot.TeleBot(creds['telegram']['bot_token'])
 sheet_url = creds['planilha']
 shortner_url = creds['encurtador']
 chat_id = creds['telegram']['chat_id_prod']
 
-sheet = gc.open_by_url(sheet_url)  # seu link da planilha
+sheet = gc.open_by_url(sheet_url)
 worksheet = sheet.sheet1
 df = pd.DataFrame(worksheet.get_all_records())
-
 print(f"[FROGGY-LOG] Iniciando as atividades! - {datetime.now()}")
 print('-=' * 30)
 
