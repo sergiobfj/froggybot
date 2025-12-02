@@ -9,12 +9,11 @@ from datetime import datetime
 with open("creds.json", "r") as file:
     creds = json.load(file)
 
-# Garantindo que a chave não tem espaços extras
+# Apenas remove espaços extras do início/fim da chave
 creds['api_sheets']['private_key'] = creds['api_sheets']['private_key'].strip()
 
-# Autorizando o gspread
+# Autentica
 gc = gspread.service_account_from_dict(creds['api_sheets'])
-
 # =================================================================
 # Configurando bot e planilha
 bot = telebot.TeleBot(creds['telegram']['bot_token'])
