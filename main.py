@@ -8,6 +8,9 @@ from datetime import datetime
 with open("creds.json", "r") as file:
     creds = json.load(file)
     
+creds['api_sheets']['private_key'] = creds['api_sheets']['private_key'].replace('\\n', '\n')
+
+# Usando o método nativo do gspread para autorização a partir do dicionário.
 gc = gspread.service_account_from_dict(creds['api_sheets'])
 # =================================================================
 
