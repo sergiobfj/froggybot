@@ -1,9 +1,23 @@
 {
     "telegram": {
-        "bot_token": "TOKEN_DO_SEU_BOT",
-        "chat_id_test": "SEU_CHAT_ID",
-        "chat_id_prod": "CHAT_ID_GRUPO"
+        "bot_token": "",
+        "chat_id_test": "",
+        "chat_id_prod": ""
     },
     "encurtador": "https://api.encurtador.dev/encurtamentos",
-    "planilha": "URL_DA_SUA_PLANILHA/export?format=csv"
+    "planilha": "",
+
+    "api_sheets": {
+        "type": "service_account",
+        "project_id": "",
+        "private_key_id": "",
+        "private_key": "",
+        "client_email": "",
+        "client_id": "",
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_x509_cert_url": "",
+        "universe_domain": "googleapis.com"
+    }
 }

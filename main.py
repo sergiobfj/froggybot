@@ -1,4 +1,5 @@
-import telebot, json, requests 
+import telebot, json, requests, gspread
+from google.oauth2.service_account import Credentials
 import pandas as pd
 from time import sleep
 from datetime import datetime
@@ -7,13 +8,20 @@ from datetime import datetime
 with open("creds.json", "r") as file:
     creds = json.load(file)
 
+scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+creds_sheets = Credentials.from_service_account_info(creds['api_sheets'], scopes=scopes)
+gc = gspread.authorize(creds_sheets) 
+
 #Atribuindo as informações do JSON a variáveis
 bot = telebot.TeleBot(creds['telegram']['bot_token'])
 sheet_url = creds['planilha']
 shortner_url = creds['encurtador']
 chat_id = creds['telegram']['chat_id_prod']
 
-df = pd.read_csv(sheet_url)
+sheet = gc.open_by_url(sheet_url)  # seu link da planilha
+worksheet = sheet.sheet1
+df = pd.DataFrame(worksheet.get_all_records())
+
 
 print(f"[FROGGY-LOG] Iniciando as atividades! - {datetime.now()}")
 print('-=' * 30)
@@ -24,15 +32,31 @@ bot.send_message(chat_id, "Fala pessoal! Promoções novas hoje!")
 
 #Lembrando, a mensagem acompanha a identação, ou seja, caso deixe a mensagem indentada em python,
 #irá aplicar os "espaços vazios" também na exibição.
+
 def envioUnico():
-    product = df.iloc[3].to_dict()
-    body = {
-        "url": product['LINK']
-    }
-    product_url = requests.post(shortner_url, json=body)
-    product_url = product_url.json()
+    global df, worksheet
+
+    # Descobre o índice da coluna STATUS
+    status_col_index = df.columns.get_loc("STATUS") + 1  # +1 porque gspread começa em 1
+    # Filtra apenas as linhas que não estão "ENVIADO"
+    df_to_send = df[df['STATUS'] != "ENVIADO"]
+
+    if df_to_send.empty:
+        print("[FROGGY-LOG] Nenhum produto para enviar.")
+        return
+
+    # Pega a primeira linha que precisa enviar
+    i = df_to_send.index[0]
+    product = df.loc[i].to_dict()
+
+    # Encurtador de URL
+    body = {"url": product['LINK']}
+    product_url = requests.post(shortner_url, json=body).json()
+    
     print(product_url["urlEncurtada"])
-    print(f"[FROGGY-LOG] PRODUTO ENVIADO! ID: {df.index} | NOME: {product['NOME']} | - {datetime.now()}")
+    print(f"[FROGGY-LOG] PRODUTO ENVIADO! ID: {i} | NOME: {product['NOME']} | - {datetime.now()}")
+
+    # Mensagem
     mensagem = f""" 
 {product['FRASE']} 🐸
 
@@ -46,16 +70,19 @@ De: <s>{product['VALOR_ANTIGO']}</s>
 Compre aqui:
 🛍️ {product["LINK"]}
 """
-#🛍️ {product_url["urlEncurtada"]}
-    #Enviando mensagem com IMAGEM em anexo
-    bot.send_photo(chat_id,photo=product["IMAGEM"],caption=mensagem, parse_mode="HTML")
+    # Envia foto
+    bot.send_photo(chat_id, photo=product["IMAGEM"], caption=mensagem, parse_mode="HTML")
     print('-=' * 30)
-    
+
+    # Atualiza STATUS na planilha
+    worksheet.update_cell(i + 2, status_col_index, "ENVIADO")  # +2 por causa do cabeçalho
+    print(f"[FROGGY-LOG] STATUS atualizado para ENVIADO na linha {i+2}")
+
 def envioEmLote():
     for i in range(len(df)):
         product = df.iloc[i].to_dict()
-        print(f'Produto: {product['NOME']} | Preço: {product['VALOR_PROMO']}')
-        print(f'Produto: {product['NOME']} | Preço: {product['VALOR_PROMO']}')
+        print(f"Produto: {product['NOME']} | Preço: {product['VALOR_PROMO']}")
+        print(f"Produto: {product['NOME']} | Preço: {product['VALOR_PROMO']}")
         
         bot.send_message(
             chat_id, 
