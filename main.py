@@ -13,7 +13,7 @@ creds['api_sheets']['private_key'] = creds['api_sheets']['private_key'].replace(
 # Usando o método nativo do gspread para autorização a partir do dicionário.
 gc = gspread.service_account_from_dict(creds['api_sheets'])
 # =================================================================
-
+#
 #Atribuindo as informações do JSON a variáveis
 bot = telebot.TeleBot(creds['telegram']['bot_token'])
 sheet_url = creds['planilha']
