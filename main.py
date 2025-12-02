@@ -9,13 +9,12 @@ from datetime import datetime
 with open("creds.json", "r") as file:
     creds = json.load(file)
 
-# Corrigindo a chave privada para garantir que os \n são interpretados corretamente
-private_key = creds['api_sheets']['private_key']
-private_key = private_key.replace("\\n", "\n")  # caso venha do JSON com \n
-creds['api_sheets']['private_key'] = private_key
+# Garantindo que a chave não tem espaços extras
+creds['api_sheets']['private_key'] = creds['api_sheets']['private_key'].strip()
 
-# Autorizando o gspread com o dicionário
+# Autorizando o gspread
 gc = gspread.service_account_from_dict(creds['api_sheets'])
+
 # =================================================================
 # Configurando bot e planilha
 bot = telebot.TeleBot(creds['telegram']['bot_token'])
@@ -26,6 +25,9 @@ chat_id = creds['telegram']['chat_id_prod']
 sheet = gc.open_by_url(sheet_url)
 worksheet = sheet.sheet1
 df = pd.DataFrame(worksheet.get_all_records())
+
+print("Autenticação realizada com sucesso!")
+
 print(f"[FROGGY-LOG] Iniciando as atividades! - {datetime.now()}")
 print('-=' * 30)
 
