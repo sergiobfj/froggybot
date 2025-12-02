@@ -1,48 +1,24 @@
-import telebot, json, requests, gspread, os
+import telebot, json, requests, gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 from time import sleep
 from datetime import datetime
 
-# --- INÍCIO DA SEÇÃO DE CONFIGURAÇÃO ---
+#Carregando o JSON com algumas informações 
+with open("creds.json", "r") as file:
+    creds = json.load(file)
 
-# Constrói o dicionário de credenciais do Google a partir das suas variáveis de ambiente.
-try:
-    creds_dict = {
-        "type": os.environ['GS_TYPE'],
-        "project_id": os.environ['GS_PROJECT_ID'],
-        "private_key_id": os.environ['GS_PRIVATE_KEY_ID'],
-        "private_key": os.environ['GS_PRIVATE_KEY'].replace('\\n', '\n'),
-        "client_email": os.environ['GS_CLIENT_EMAIL'],
-        "client_id": os.environ['GS_CLIENT_ID'],
-        "auth_uri": os.environ['GS_AUTH_URI'],
-        "token_uri": os.environ['GS_TOKEN_URI'],
-        "auth_provider_x509_cert_url": os.environ['GS_AUTH_PROVIDER_CERT_URL'],
-        "client_x509_cert_url": os.environ['GS_CLIENT_CERT_URL']
-    }
-except KeyError as e:
-    print(f"[FROGGY-LOG] ERRO CRÍTICO: A variável de ambiente {e} não foi encontrada!")
-    raise
-
-# Carrega as outras configurações do ambiente
-bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
-chat_id = os.environ.get('TELEGRAM_CHAT_ID_PROD') # Usando a variável de produção
-sheet_url = os.environ.get('PLANILHA_URL')
-shortner_url = os.environ.get('ENCURTADOR_URL')
-
-if not all([bot_token, chat_id, sheet_url, shortner_url]):
-    raise ValueError("ERRO: Uma ou mais variáveis (TELEGRAM_BOT_TOKEN, CHAT_ID, etc.) não foram definidas!")
-
-# --- FIM DA SEÇÃO DE CONFIGURAÇÃO ---
-
-
-# Autenticação e inicialização dos serviços
 scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-creds_sheets = Credentials.from_service_account_info(creds_dict, scopes=scopes )
+creds_sheets = Credentials.from_service_account_info(creds['api_sheets'], scopes=scopes)
 gc = gspread.authorize(creds_sheets)
 
-bot = telebot.TeleBot(bot_token)
-sheet = gc.open_by_url(sheet_url)
+#Atribuindo as informações do JSON a variáveis
+bot = telebot.TeleBot(creds['telegram']['bot_token'])
+sheet_url = creds['planilha']
+shortner_url = creds['encurtador']
+chat_id = creds['telegram']['chat_id_prod']
+
+sheet = gc.open_by_url(sheet_url)  # seu link da planilha
 worksheet = sheet.sheet1
 df = pd.DataFrame(worksheet.get_all_records())
 
@@ -50,37 +26,37 @@ df = pd.DataFrame(worksheet.get_all_records())
 print(f"[FROGGY-LOG] Iniciando as atividades! - {datetime.now()}")
 print('-=' * 30)
 
+#Lembrar de enviar alguns exemplos de frase nos primeiros posts de cada dia. Ou também 
+#Algumas frases de efeito antes do primeiro post em cada TURNO do dia.
 bot.send_message(chat_id, "Fala pessoal! Promoções novas hoje!")
+
+#Lembrando, a mensagem acompanha a identação, ou seja, caso deixe a mensagem indentada em python,
+#irá aplicar os "espaços vazios" também na exibição.
 
 def envioUnico():
     global df, worksheet
 
-    if df.empty or "STATUS" not in df.columns:
-        print("[FROGGY-LOG] DataFrame está vazio ou não contém a coluna 'STATUS'.")
-        return
-
-    status_col_index = df.columns.get_loc("STATUS") + 1
+    # Descobre o índice da coluna STATUS
+    status_col_index = df.columns.get_loc("STATUS") + 1  # +1 porque gspread começa em 1
+    # Filtra apenas as linhas que não estão "ENVIADO"
     df_to_send = df[df['STATUS'] != "ENVIADO"]
 
     if df_to_send.empty:
-        print("[FROGGY-LOG] Nenhum produto novo para enviar.")
+        print("[FROGGY-LOG] Nenhum produto para enviar.")
         return
 
+    # Pega a primeira linha que precisa enviar
     i = df_to_send.index[0]
     product = df.loc[i].to_dict()
 
-    try:
-        body = {"url": product['LINK']}
-        response = requests.post(shortner_url, json=body)
-        response.raise_for_status()
-        product_url = response.json()
-        short_url = product_url.get("urlEncurtada", product['LINK'])
-    except requests.exceptions.RequestException as e:
-        print(f"[FROGGY-LOG] Erro ao encurtar URL: {e}. Usando link original.")
-        short_url = product['LINK']
+    # Encurtador de URL
+    body = {"url": product['LINK']}
+    product_url = requests.post(shortner_url, json=body).json()
     
+    print(product_url["urlEncurtada"])
     print(f"[FROGGY-LOG] PRODUTO ENVIADO! ID: {i} | NOME: {product['NOME']} | - {datetime.now()}")
 
+    # Mensagem
     mensagem = f""" 
 {product['FRASE']} 🐸
 
@@ -92,15 +68,41 @@ De: <s>{product['VALOR_ANTIGO']}</s>
 <i>CUPOM: {product['CUPOM']} ✨</i>​
 
 Compre aqui:
-🛍️ {short_url}
+🛍️ {product["LINK"]}
 """
+    # Envia foto
     bot.send_photo(chat_id, photo=product["IMAGEM"], caption=mensagem, parse_mode="HTML")
     print('-=' * 30)
 
-    worksheet.update_cell(i + 2, status_col_index, "ENVIADO")
+    # Atualiza STATUS na planilha
+    worksheet.update_cell(i + 2, status_col_index, "ENVIADO")  # +2 por causa do cabeçalho
     print(f"[FROGGY-LOG] STATUS atualizado para ENVIADO na linha {i+2}")
 
-# Execução
+def envioEmLote():
+    for i in range(len(df)):
+        product = df.iloc[i].to_dict()
+        print(f"Produto: {product['NOME']} | Preço: {product['VALOR_PROMO']}")
+        print(f"Produto: {product['NOME']} | Preço: {product['VALOR_PROMO']}")
+        
+        bot.send_message(
+            chat_id, 
+            f"""
+            OFERTAS DO SAPO LOUCO 🐸
+            {product['FRASE']}
+
+            {product['NOME']}
+
+            De: ~~{product['VALOR_ANTIGO']}~~            
+            Por: {product['VALOR_PROMO']} 😍
+            CUPOM: {product['CUPOM']} ✨​
+
+            Compre aqui:
+            🛍️ {product['LINK']}
+
+            """, parse_mode="HTML")
+        print('-=' * 30)
+
+#Executando o código de acordo com o fluxo
 envioUnico()
 print(f"[FROGGY-LOG] Finalizando envio! - {datetime.now()}")
 print(f"[FROGGY-LOG] Aguardando horário...")
