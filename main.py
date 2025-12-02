@@ -7,9 +7,12 @@ from datetime import datetime
 #Carregando o JSON com algumas informações 
 with open("creds.json", "r") as file:
     creds = json.load(file)
+    
+creds['api_sheets']['private_key'] = creds['api_sheets']['private_key'].replace('\\n', '\n')
+# =================================================================
 
 scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-creds_sheets = Credentials.from_service_account_info(creds['api_sheets'], scopes=scopes)
+creds_sheets = Credentials.from_service_account_info(creds['api_sheets'], scopes=scopes )
 gc = gspread.authorize(creds_sheets)
 
 #Atribuindo as informações do JSON a variáveis
@@ -21,7 +24,6 @@ chat_id = creds['telegram']['chat_id_prod']
 sheet = gc.open_by_url(sheet_url)  # seu link da planilha
 worksheet = sheet.sheet1
 df = pd.DataFrame(worksheet.get_all_records())
-
 
 print(f"[FROGGY-LOG] Iniciando as atividades! - {datetime.now()}")
 print('-=' * 30)
